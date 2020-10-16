@@ -1,0 +1,52 @@
+<html>
+<head>
+    <title>Vendors</title>
+
+    <style>
+            button, input[type=text] { margin: 10px; }
+    </style>
+
+</head>
+<body>
+    <h1>Vendors</h1>
+
+    <ul id="vendors"></ul>
+
+<script>
+(function(window, document, undefined) {
+
+    var vendors = document.getElementById('vendors');
+
+    fetch("http://localhost:8080/vendors")
+            .then(data => data.json())
+            .then(results => {
+
+                console.log(results);
+
+                results._embedded.vendors.forEach(vendor => {
+                    var item = document.createElement("li");
+
+                    var input = document.createElement("input");
+                    input.type = "text";
+                    input.value = vendor.companyName;
+
+                    var button = document.createElement("button");
+                    var text = document.createTextNode("Save");
+                    button.appendChild(text);
+                    button.onclick = (e) => {
+                        alert(`Saving vendor ${vendor.companyName}`);
+                    };
+
+                    item.appendChild(input);
+                    item.appendChild(button);
+
+                    vendors.appendChild(item);
+                });
+            });
+
+})(window, document);
+</script>
+
+
+</body>
+</html>
