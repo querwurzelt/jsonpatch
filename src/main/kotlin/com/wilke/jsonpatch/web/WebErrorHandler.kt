@@ -15,7 +15,7 @@ class WebErrorHandler {
     @ExceptionHandler(PatchException::class)
     @ResponseStatus(HttpStatus.CONFLICT)
     fun handlePatchException(e: PatchException) {
-        log.debug("Patch failed", e)
+        log.info("Patch failed", e)
     }
 
 }

@@ -21,7 +21,7 @@
 
     var patchEntity = (entity, patch) => {
         if (!patch || !patch.length) {
-            console.error("Nothing to patch!");
+            console.log("Nothing to patch!");
             return;
         }
 
@@ -34,25 +34,14 @@
         })
         .then((response) => {
             if (!response.ok) {
-                throw Error(response);
+                throw response;
             }
         })
-        // the following handles concurrent updates and is more of a convenience feature
         .catch(error => {
-            fetch(entity._links.self.href)
-            .then((response) => {
-                if (!response.ok) {
-                    throw Error(response);
-                } else {
-                    return response;
-                }
-            })
-            .then(data => data.json())
-            .then(refreshedEntity => {
-                var refreshedPatch = jsonpatch.compare(refreshedEntity, entity, true);
-                patchEntity(refreshedEntity, refreshedPatch);
-            })
-            .catch(error => alert("Couldn't patch entity. Please refresh and try again."));
+            console.error("Patching failed.", error);
+            if (error.status === 409) {
+                alert("Entity was updated in the meantime. Please refresh and try again.");
+            }
         });
     }
 
@@ -81,12 +70,12 @@
                     vendors.appendChild(item);
 
                     button.onclick = (e) => {
-                        var observer = jsonpatch.observe(vendor);
-                        vendor.companyName = companyNameInput.value;
-                        vendor.taxNumber = taxNumberInput.value;
+                        var carbonCopy = {...vendor};
+                        carbonCopy.companyName = companyNameInput.value;
+                        carbonCopy.taxNumber = taxNumberInput.value;
 
-                        var patch = jsonpatch.generate(observer, true);
-                        patchEntity(vendor, patch);
+                        var patch = jsonpatch.compare(vendor, carbonCopy, true);
+                        patchEntity(carbonCopy, patch);
                     };
                 });
             });
