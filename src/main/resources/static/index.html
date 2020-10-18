@@ -2,6 +2,8 @@
 <head>
     <title>Vendors</title>
 
+    <script type="text/javascript" src="js/fast-json-patch.min.js"></script>
+
     <style>
             button, input[type=text] { margin: 10px; }
     </style>
@@ -17,33 +19,77 @@
 
     var vendors = document.getElementById('vendors');
 
+    var patchEntity = (entity, patch) => {
+        if (!patch || !patch.length) {
+            console.error("Nothing to patch!");
+            return;
+        }
+
+        console.log("Patching: ", patch);
+
+        fetch(entity._links.self.href, {
+                method: 'PATCH',
+                body: JSON.stringify(patch),
+                headers: {"Content-Type": "application/json-patch+json"}
+        })
+        .then((response) => {
+            if (!response.ok) {
+                throw Error(response);
+            }
+        })
+        // the following handles concurrent updates and is more of a convenience feature
+        .catch(error => {
+            fetch(entity._links.self.href)
+            .then((response) => {
+                if (!response.ok) {
+                    throw Error(response);
+                } else {
+                    return response;
+                }
+            })
+            .then(data => data.json())
+            .then(refreshedEntity => {
+                var refreshedPatch = jsonpatch.compare(refreshedEntity, entity, true);
+                patchEntity(refreshedEntity, refreshedPatch);
+            })
+            .catch(error => alert("Couldn't patch entity. Please refresh and try again."));
+        });
+    }
+
     fetch("http://localhost:8080/vendors")
             .then(data => data.json())
             .then(results => {
-
-                console.log(results);
-
                 results._embedded.vendors.forEach(vendor => {
                     var item = document.createElement("li");
 
-                    var input = document.createElement("input");
-                    input.type = "text";
-                    input.value = vendor.companyName;
+                    var companyNameInput = document.createElement("input");
+                    companyNameInput.type = "text";
+                    companyNameInput.value = vendor.companyName;
+
+                    var taxNumberInput = document.createElement("input");
+                    taxNumberInput.type = "text";
+                    taxNumberInput.value = vendor.taxNumber;
 
                     var button = document.createElement("button");
                     var text = document.createTextNode("Save");
                     button.appendChild(text);
-                    button.onclick = (e) => {
-                        alert(`Saving vendor ${vendor.companyName}`);
-                    };
 
-                    item.appendChild(input);
+                    item.appendChild(companyNameInput);
+                    item.appendChild(taxNumberInput);
                     item.appendChild(button);
 
                     vendors.appendChild(item);
+
+                    button.onclick = (e) => {
+                        var observer = jsonpatch.observe(vendor);
+                        vendor.companyName = companyNameInput.value;
+                        vendor.taxNumber = taxNumberInput.value;
+
+                        var patch = jsonpatch.generate(observer, true);
+                        patchEntity(vendor, patch);
+                    };
                 });
             });
-
 })(window, document);
 </script>
 
